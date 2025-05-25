@@ -1,156 +1,113 @@
-# Aztec Network Alpha Testnet: Sequencer Node Setup
+# 🚀 Aztec Sequencer - One-Click Setup
 
-## Hardware Requirements
-
-- **CPU**: 8+ cores
-- **RAM**: 16GB minimum
-- **Storage**: 100GB+ SSD
-- **OS**: Ubuntu Linux
-
-## Quick Start Guide
-
-### 1. Base System Setup
-
-```bash
-# Update system
-sudo apt-get update && sudo apt-get upgrade -y
-
-# Install essential tools
-sudo apt install curl screen htop iptables build-essential git wget jq \
-  make gcc nano tmux libssl-dev libleveldb-dev clang unzip -y
+```
+╔═════════════════════════════════════════════════════════════════════════════╗
+║                                                                             ║
+║    ██████╗ ██╗  ██╗ ██████╗ ██╗  ██╗███████╗███████╗██╗  ██╗                ║
+║   ██╔═████╗╚██╗██╔╝██╔═══██╗██║  ██║╚══███╔╝██╔════╝██║  ██║                ║
+║   ██║██╔██║ ╚███╔╝ ██║   ██║███████║  ███╔╝ ███████╗███████║                ║
+║   ████╔╝██║ ██╔██╗ ██║   ██║██╔══██║ ███╔╝  ╚════██║██╔══██║                ║
+║   ╚██████╔╝██╔╝ ██╗╚██████╔╝██║  ██║███████╗███████║██║  ██║                ║
+║    ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝                ║
+║                                                                             ║
+║                      🚀 Aztec Sequencer Setup 🚀                           ║
+║                                                                             ║
+║                     Follow us: https://x.com/0xohzsh                       ║
+║                                                                             ║
+╚═════════════════════════════════════════════════════════════════════════════╝
 ```
 
-### 2. Docker Setup
+**Automated Aztec Alpha Testnet Sequencer deployment with Docker**
+
+**Follow us on X (Twitter): [@0xohzsh](https://x.com/0xohzsh)**
+
+## ✨ One-Click Installation
 
 ```bash
-# Clean existing Docker installations
-for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do
-  sudo apt-get remove $pkg -y
-done
-
-# Set up Docker repository
-sudo apt-get install ca-certificates curl gnupg -y
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] \
-  https://download.docker.com/linux/ubuntu "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-# Install Docker packages
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-
-# Configure Docker service
-sudo systemctl enable docker
-sudo systemctl restart docker
+curl -fsSL https://raw.githubusercontent.com/0xohzsh/aztec-sequencer/main/setup.sh | bash
 ```
 
-### 3. Install Aztec CLI
+## 📋 Requirements
+
+- **Ubuntu/Debian** server with sudo access
+- **8+ CPU cores**, **8GB+ RAM**, **100GB+ SSD**
+- **Ethereum Sepolia RPC** (Ankr/Alchemy/Infura/Own)
+- **Beacon Chain RPC** (Ex: `https://rpc.drpc.org/eth/sepolia/beacon`)
+- **Validator private key** with Sepolia ETH
+
+## 🚀 Quick Start
+
+1. **Run the setup script** (interactive prompts will guide you)
+2. **Provide required details:**
+
+   - Ethereum RPC URL
+   - Beacon chain URL
+   - Validator private key (with 0x prefix)
+   - Coinbase address
+   - P2P IP (auto-detected)
+
+3. **Script automatically:**
+   - Installs Docker if needed
+   - Creates `aztec-sequencer` directory
+   - Generates `.env` and `docker-compose.yml`
+   - Starts the sequencer
+
+## 🔧 Management Commands
 
 ```bash
-# Install Aztec tools
-bash -i <(curl -s https://install.aztec.network)
-source ~/.bash_profile
+# View logs
+docker logs -f aztec-sequencer
 
-# Verify installation
-aztec
+# Stop sequencer
+cd aztec-sequencer && docker compose down
 
-# Update to Alpha testnet
-aztec-up alpha-testnet
+# Start sequencer
+cd aztec-sequencer && docker compose up -d
+
+# Check status
+docker compose ps
 ```
 
-### 4. Network Configuration
+## 📊 Sequencer & Validator Registration
 
-#### Required External Services
+After your node syncs, register as a validator:
 
-- Ethereum Sepolia RPC endpoint (from Ankr or Alchemy)
-- Sepolia Beacon RPC endpoint (from Ankr or use `https://rpc.drpc.org/eth/sepolia/beacon`)
-- Ethereum wallet with Sepolia ETH
+1. **Join Discord**: [https://discord.gg/aztec](https://discord.gg/aztec)
+2. **Run**: `/operator start` in `operators|start-here` channel
+3. **Get proof data**:
 
-### 5. Launch Sequencer
+   ```bash
+   # Get proven block and sync proof
+   PROVEN_BLOCK=$(curl -s -X POST -H 'Content-Type: application/json' \
+     -d '{"jsonrpc":"2.0","method":"node_getL2Tips","params":[],"id":67}' \
+     http://localhost:8080 | jq -r ".result.proven.number")
 
-```bash
-# Get server public IP
-SERVER_IP=$(curl -s ipv4.icanhazip.com)
-echo "Your server IP: $SERVER_IP"
+   if [[ -z "$PROVEN_BLOCK" || "$PROVEN_BLOCK" == "null" ]]; then
+     echo "Failed to retrieve the proven L2 block number."
+   else
+     echo "Proven L2 Block Number: $PROVEN_BLOCK"
+     echo "Fetching Sync Proof..."
+     SYNC_PROOF=$(curl -s -X POST -H 'Content-Type: application/json' \
+       -d "{\"jsonrpc\":\"2.0\",\"method\":\"node_getArchiveSiblingPath\",\"params\":[\"$PROVEN_BLOCK\",\"$PROVEN_BLOCK\"],\"id\":68}" \
+       http://localhost:8080 | jq -r ".result")
 
-# Configure firewall
-sudo ufw allow 22/tcp
-sudo ufw allow 40400/tcp
-sudo ufw allow 8080/tcp
-sudo ufw --force enable
-```
+     echo "Sync Proof:"
+     echo "$SYNC_PROOF"
+   fi
+   ```
 
-```bash
-# Create persistent session
-screen -S aztec
+4. **Validator Registration**:
+   ```bash
+   # Register as validator on Sepolia testnet
+   aztec add-l1-validator \
+     --private-key your-private-key \
+     --attester your-validator-address \
+     --proposer-eoa your-validator-address \
+     --proposer-eoa your-validator-address \
+     --staking-asset-handler 0xF739D03e98e23A7B65940848aBA8921fF3bAc4b2 \
+     --l1-chain-id 11155111
+   ```
 
-# Start sequencer (replace placeholders with your actual values)
-aztec start --node --archiver --sequencer \
-  --network alpha-testnet \
-  --l1-rpc-urls YOUR_SEPOLIA_RPC_URL \
-  --l1-consensus-host-urls YOUR_BEACON_RPC_URL \
-  --sequencer.validatorPrivateKey 0xYOUR_PRIVATE_KEY \
-  --sequencer.coinbase 0xYOUR_ETH_ADDRESS \
-  --p2p.p2pIp $SERVER_IP
+---
 
-# To detach from screen: Ctrl+A, D
-# To reattach: screen -r aztec
-```
-
-### 6. Register as Validator
-
-After your node is synced:
-
-```bash
-# Get latest proven block
-BLOCK=$(curl -s -X POST -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"node_getL2Tips","params":[],"id":67}' \
-  http://localhost:8080 | jq -r ".result.proven.number")
-echo "Latest proven block: $BLOCK"
-
-# Generate proof
-PROOF=$(curl -s -X POST -H 'Content-Type: application/json' \
-  -d "{\"jsonrpc\":\"2.0\",\"method\":\"node_getArchiveSiblingPath\",\"params\":[\"$BLOCK\",\"$BLOCK\"],\"id\":67}" \
-  http://localhost:8080 | jq -r ".result")
-echo "$PROOF"
-```
-
-### 7. Discord Registration
-
-1. Join Aztec Network Discord [https://discord.gg/aztec]
-2. Go to the `operators| start-here` channel
-3. Run the command `/operator start`
-4. Fill in required information:
-   - Address: `0xYOUR_ETH_ADDRESS`
-   - Block number: Value from the `$BLOCK` variable
-   - Proof: Value from the `$PROOF` variable
-
-### 8. On-Chain Registration
-
-```bash
-# Register as validator on-chain
-aztec add-l1-validator \
-  --l1-rpc-urls YOUR_SEPOLIA_RPC_URL \
-  --private-key YOUR_PRIVATE_KEY \
-  --attester 0xYOUR_ETH_ADDRESS \
-  --proposer-eoa 0xYOUR_ETH_ADDRESS \
-  --staking-asset-handler 0xF739D03e98e23A7B65940848aBA8921fF3bAc4b2 \
-  --l1-chain-id 11155111
-```
-
-
-## Maintenance
-
-- **Check node status:**
-
-  ```bash
-  screen -r aztec
-  ```
-
-- **Update Aztec tools:**
-  ```bash
-  aztec-up alpha-testnet
-  ```
+**One command. Complete setup. Start validating! 🚀**

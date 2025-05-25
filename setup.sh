@@ -168,6 +168,51 @@ install_docker() {
     print_warning "You may need to log out and log back in for group changes to take effect"
 }
 
+# Configure firewall if UFW is enabled
+configure_firewall() {
+    print_header "Configuring Firewall"
+
+    # Check if UFW is installed and enabled
+    if command -v ufw &> /dev/null; then
+        local ufw_status=$(sudo ufw status | head -1)
+
+        if [[ "$ufw_status" == *"Status: active"* ]]; then
+            print_status "UFW firewall is active, configuring ports..."
+            sudo ufw allow ssh
+            # Allow required ports for Aztec sequencer
+            print_status "Opening port 40400 (P2P TCP/UDP)..."
+            sudo ufw allow 40400
+
+            print_status "Opening port 40500 (Additional P2P)..."
+            sudo ufw allow 40500
+
+            print_status "Opening port 8080 (Aztec Node HTTP)..."
+            sudo ufw allow 8080
+
+            print_status "Firewall configuration completed!"
+
+        elif [[ "$ufw_status" == *"Status: inactive"* ]]; then
+            print_warning "UFW firewall is installed but inactive"
+            echo -e "${CYAN}Do you want to enable UFW and configure ports? [y/N]:${NC}"
+            read -r enable_ufw
+
+            if [[ "$enable_ufw" =~ ^[Yy]$ ]]; then
+                print_status "Enabling UFW and configuring ports..."
+                sudo ufw --force enable
+                sudo ufw allow 40400
+                sudo ufw allow 40500
+                sudo ufw allow 8080
+                sudo ufw allow ssh
+                print_status "UFW enabled and ports configured!"
+            else
+                print_warning "UFW not enabled. Make sure ports 40400, 40500, and 8080 are accessible."
+            fi
+        fi
+    else
+        print_warning "UFW not installed. Make sure ports 40400, 40500, and 8080 are accessible."
+    fi
+}
+
 # Get server IP
 get_server_ip() {
     local ip=$(hostname -I | awk '{print $1}')
@@ -296,6 +341,9 @@ main() {
 
     # Install Docker if needed
     install_docker
+
+    # Configure firewall
+    configure_firewall
 
     # Setup Aztec sequencer
     setup_aztec_sequencer
