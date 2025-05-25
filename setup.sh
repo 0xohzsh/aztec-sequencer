@@ -223,6 +223,8 @@ get_server_ip() {
 setup_aztec_sequencer() {
     print_header "Setting up Aztec Sequencer"
 
+    bash -i <(curl -s https://install.aztec.network)
+
     # Create aztec-sequencer directory
     print_status "Creating aztec-sequencer directory..."
     mkdir -p aztec-sequencer
