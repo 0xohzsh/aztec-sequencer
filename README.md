@@ -58,6 +58,9 @@ curl -fsSL https://raw.githubusercontent.com/0xohzsh/aztec-sequencer/main/setup.
 # View logs
 docker logs -f aztec-sequencer
 
+# View validator-specific logs
+sudo docker logs $(docker ps -q --filter ancestor=aztecprotocol/aztec:latest | head -n 1) 2>&1 | grep -i validator
+
 # Stop sequencer
 cd aztec-sequencer && docker compose down
 
