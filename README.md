@@ -100,6 +100,7 @@ After your node syncs, register as a validator:
    ```bash
    # Register as validator on Sepolia testnet
    aztec add-l1-validator \
+     --l1-rpc-urls RPC_URL \
      --private-key your-private-key \
      --attester your-validator-address \
      --proposer-eoa your-validator-address \
