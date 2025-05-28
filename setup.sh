@@ -64,9 +64,9 @@ prompt_input() {
     local value
 
     if [ -n "$default" ]; then
-        echo -e "${CYAN}$prompt [default: $default]:${NC}"
+        printf "${CYAN}%s [default: %s]:${NC} " "$prompt" "$default"
     else
-        echo -e "${CYAN}$prompt:${NC}"
+        printf "${CYAN}%s:${NC} " "$prompt"
     fi
 
     read -r value
@@ -223,7 +223,20 @@ get_server_ip() {
 setup_aztec_sequencer() {
     print_header "Setting up Aztec Sequencer"
 
-    bash -i <(curl -s https://install.aztec.network)
+    # Check if Aztec is already installed
+    if command -v aztec &> /dev/null || [ -f "$HOME/.aztec/bin/aztec" ]; then
+        print_status "Aztec is already installed, skipping installation..."
+        # Add to PATH if not already there
+        if [[ ":$PATH:" != *":$HOME/.aztec/bin:"* ]]; then
+            export PATH="$PATH:$HOME/.aztec/bin"
+            print_status "Added Aztec to PATH for this session"
+        fi
+    else
+        print_status "Installing Aztec..."
+        bash -i <(curl -s https://install.aztec.network)
+        # Add to PATH
+        export PATH="$PATH:$HOME/.aztec/bin"
+    fi
 
     # Create aztec-sequencer directory
     print_status "Creating aztec-sequencer directory..."
@@ -236,14 +249,43 @@ setup_aztec_sequencer() {
 
     print_header "Aztec Sequencer Configuration"
     echo -e "${YELLOW}Please provide the following configuration details:${NC}"
+    echo -e "${CYAN}You can press Enter to skip and edit the .env file manually later${NC}"
     echo ""
 
-    # Interactive prompts for .env configuration
-    ETHEREUM_RPC_URL=$(prompt_input "Enter Ethereum RPC URL (e.g., https://mainnet.infura.io/v3/YOUR_PROJECT_ID)")
-    CONSENSUS_BEACON_URL=$(prompt_input "Enter Consensus Beacon URL (e.g., https://beacon-nd-123-456-789.p2pify.com)")
-    VALIDATOR_PRIVATE_KEY=$(prompt_input "Enter Validator Private Key (with 0x prefix)")
-    COINBASE=$(prompt_input "Enter Coinbase address (e.g., 0x1234...)")
-    P2P_IP=$(prompt_input "Enter P2P IP address" "$server_ip")
+    # Interactive prompts for .env configuration with better examples
+    echo -e "${MAGENTA}1. Ethereum RPC URL${NC}"
+    echo "   Examples: https://mainnet.infura.io/v3/YOUR_KEY, https://eth-mainnet.alchemyapi.io/v2/YOUR_KEY"
+    printf "${CYAN}Enter Ethereum RPC URL:${NC} "
+    read -r ETHEREUM_RPC_URL
+
+    echo ""
+    echo -e "${MAGENTA}2. Consensus Beacon URL${NC}"
+    echo "   Examples: https://beacon-nd-123-456-789.p2pify.com, https://eth-beacon-mainnet.infura.io/YOUR_KEY"
+    printf "${CYAN}Enter Consensus Beacon URL:${NC} "
+    read -r CONSENSUS_BEACON_URL
+
+    echo ""
+    echo -e "${MAGENTA}3. Validator Private Key${NC}"
+    echo "   Format: 0x followed by 64 hex characters (keep this secure!)"
+    printf "${CYAN}Enter Validator Private Key (with 0x prefix):${NC} "
+    read -r VALIDATOR_PRIVATE_KEY
+
+    echo ""
+    echo -e "${MAGENTA}4. Coinbase Address${NC}"
+    echo "   Format: 0x followed by 40 hex characters (where rewards will be sent)"
+    printf "${CYAN}Enter Coinbase address:${NC} "
+    read -r COINBASE
+
+    echo ""
+    echo -e "${MAGENTA}5. P2P IP Address${NC}"
+    echo "   This is your server's public IP address for P2P connections"
+    printf "${CYAN}Enter P2P IP address [default: %s]:${NC} " "$server_ip"
+    read -r P2P_IP_INPUT
+    if [[ -z "$P2P_IP_INPUT" ]]; then
+        P2P_IP="$server_ip"
+    else
+        P2P_IP="$P2P_IP_INPUT"
+    fi
 
     # Create .env file
     print_status "Creating .env file..."
@@ -292,6 +334,45 @@ EOF
     echo "  ✓ .env - Environment configuration"
     echo "  ✓ docker-compose.yml - Docker services configuration"
     echo ""
+
+    # Check if .env has only default/empty values
+    local env_empty=0
+    local missing_fields=()
+
+    if [[ -z "$ETHEREUM_RPC_URL" ]]; then
+        env_empty=1
+        missing_fields+=("ETHEREUM_RPC_URL")
+    fi
+    if [[ -z "$CONSENSUS_BEACON_URL" ]]; then
+        env_empty=1
+        missing_fields+=("CONSENSUS_BEACON_URL")
+    fi
+    if [[ -z "$VALIDATOR_PRIVATE_KEY" ]]; then
+        env_empty=1
+        missing_fields+=("VALIDATOR_PRIVATE_KEY")
+    fi
+    if [[ -z "$COINBASE" ]]; then
+        env_empty=1
+        missing_fields+=("COINBASE")
+    fi
+
+    if [[ $env_empty -eq 1 ]]; then
+        print_warning "Configuration incomplete! Missing values for: ${missing_fields[*]}"
+        print_warning "Please edit the .env file and provide real configuration values before starting the sequencer."
+        echo ""
+        print_status "Configuration file location: $(pwd)/.env"
+        print_status "Edit with: nano .env"
+        echo ""
+        print_status "Required format:"
+        echo "  ETHEREUM_RPC_URL=https://mainnet.infura.io/v3/YOUR_PROJECT_ID"
+        echo "  CONSENSUS_BEACON_URL=https://beacon-nd-123-456-789.p2pify.com"
+        echo "  VALIDATOR_PRIVATE_KEY=0x1234567890abcdef..."
+        echo "  COINBASE=0x1234567890abcdef12345678"
+        echo "  P2P_IP=$P2P_IP"
+        echo ""
+        print_status "After editing, run the script again to start the sequencer."
+        exit 0
+    fi
 }
 
 # Start Aztec sequencer
