@@ -313,19 +313,19 @@ services:
       ETHEREUM_HOSTS: \${ETHEREUM_RPC_URL}
       L1_CONSENSUS_HOST_URLS: \${CONSENSUS_BEACON_URL}
       DATA_DIRECTORY: /data
-      VALIDATOR_PRIVATE_KEY: \${VALIDATOR_PRIVATE_KEY}
+      VALIDATOR_PRIVATE_KEYS: \${VALIDATOR_PRIVATE_KEY}
       COINBASE: \${COINBASE}
       P2P_IP: \${P2P_IP}
       LOG_LEVEL: info
       GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS: 0x54F7fe24E349993b363A5Fa1bccdAe2589D5E5Ef
     entrypoint: >
-      sh -c 'node --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js start --network alpha-testnet --node --archiver --sequencer'
+      sh -c 'node --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js start --network testnet --node --archiver --sequencer'
     ports:
       - 40400:40400/tcp
       - 40400:40400/udp
       - 8080:8080
     volumes:
-      - $HOME/.aztec/alpha-testnet/data/:/data
+      - $HOME/.aztec/testnet/data/:/data
 EOF
 
     print_status "Configuration files created successfully!"
